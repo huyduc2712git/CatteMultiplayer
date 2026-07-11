@@ -18,11 +18,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Connect to backend server. In production, this can be empty io() if served from same origin
+    // Generate or retrieve persistent player ID
+    let persistentId = localStorage.getItem('catte_player_id');
+    if (!persistentId) {
+      persistentId = 'p_' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('catte_player_id', persistentId);
+    }
+
     const socketUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
     const newSocket = io(socketUrl, {
       transports: ['websocket'],
-      autoConnect: true
+      autoConnect: true,
+      auth: {
+        playerId: persistentId
+      }
     });
 
     newSocket.on('connect', () => {

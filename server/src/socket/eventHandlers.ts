@@ -3,8 +3,35 @@ import { SocketManager } from '../managers/SocketManager';
 import { RoomManager } from '../managers/RoomManager';
 import { Player } from '../core/Player';
 
+// Module-level map to track disconnected players during the grace period
+const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
+
 export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   const rm = RoomManager.getInstance();
+
+  // Retrieve persistent playerId from handshake auth payload, default to socket.id
+  const playerId = socket.handshake.auth.playerId || socket.id;
+
+  // Make the socket join its own playerId room so sm.sendToPlayer can send direct messages to it
+  socket.join(playerId);
+
+  console.log(`Socket associated: ${socket.id} -> Player: ${playerId}`);
+
+  // If this player was recently disconnected, clear the removal timeout and re-add them to room channel
+  const existingTimeout = disconnectTimeouts.get(playerId);
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+    disconnectTimeouts.delete(playerId);
+    console.log(`Player ${playerId} reconnected within grace period.`);
+
+    const roomId = sm.getPlayerRoomId(playerId);
+    if (roomId) {
+      socket.join(roomId);
+      // Notify other players they returned
+      socket.to(roomId).emit('player-reconnected', { playerId });
+      sm.broadcastRoomUpdate(roomId);
+    }
+  }
 
   // Create room handler
   socket.on('create-room', ({ playerName, roomName }: { playerName: string; roomName: string }) => {
@@ -15,12 +42,12 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
       }
 
       // Create new room and player
-      const room = rm.createRoom(roomName, socket.id);
-      const player = new Player(socket.id, playerName);
+      const room = rm.createRoom(roomName, playerId);
+      const player = new Player(playerId, playerName);
       
       room.addPlayer(player);
       socket.join(room.id);
-      sm.setPlayerRoom(socket.id, room.id);
+      sm.setPlayerRoom(playerId, room.id);
 
       socket.emit('room-created', room.id);
       sm.broadcastRoomUpdate(room.id);
@@ -48,16 +75,16 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
         return;
       }
 
-      const player = new Player(socket.id, playerName);
+      const player = new Player(playerId, playerName);
       rm.joinRoom(roomId, player);
       
       socket.join(room.id);
-      sm.setPlayerRoom(socket.id, room.id);
+      sm.setPlayerRoom(playerId, room.id);
 
       sm.broadcastRoomUpdate(room.id);
       
       // Notify other players
-      socket.to(room.id).emit('player-joined', { playerId: socket.id, playerName });
+      socket.to(room.id).emit('player-joined', { playerId, playerName });
     } catch (e: any) {
       socket.emit('error', e.message || 'Failed to join room');
     }
@@ -65,19 +92,19 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
 
   // Leave room handler
   socket.on('leave-room', () => {
-    handlePlayerLeaving();
+    handlePlayerLeaving(playerId);
   });
 
   // Player ready handler
   socket.on('ready', () => {
     try {
-      const roomId = sm.getPlayerRoomId(socket.id);
+      const roomId = sm.getPlayerRoomId(playerId);
       if (!roomId) return;
 
       const room = rm.getRoom(roomId);
       if (!room) return;
 
-      const player = room.players.find(p => p.id === socket.id);
+      const player = room.players.find(p => p.id === playerId);
       if (player) {
         player.isReady = true;
         player.status = 'READY';
@@ -91,13 +118,13 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   // Player unready handler
   socket.on('unready', () => {
     try {
-      const roomId = sm.getPlayerRoomId(socket.id);
+      const roomId = sm.getPlayerRoomId(playerId);
       if (!roomId) return;
 
       const room = rm.getRoom(roomId);
       if (!room) return;
 
-      const player = room.players.find(p => p.id === socket.id);
+      const player = room.players.find(p => p.id === playerId);
       if (player) {
         player.isReady = false;
         player.status = 'WAITING';
@@ -111,13 +138,13 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   // Start game handler
   socket.on('start-game', () => {
     try {
-      const roomId = sm.getPlayerRoomId(socket.id);
+      const roomId = sm.getPlayerRoomId(playerId);
       if (!roomId) return;
 
       const room = rm.getRoom(roomId);
       if (!room) return;
 
-      if (room.roomMasterId !== socket.id) {
+      if (room.roomMasterId !== playerId) {
         socket.emit('error', 'Only the room master can start the game');
         return;
       }
@@ -138,7 +165,7 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   // Play card handler
   socket.on('play-card', ({ cardId, isFaceUp }: { cardId: string; isFaceUp: boolean }) => {
     try {
-      const roomId = sm.getPlayerRoomId(socket.id);
+      const roomId = sm.getPlayerRoomId(playerId);
       if (!roomId) return;
 
       const room = rm.getRoom(roomId);
@@ -148,14 +175,14 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
       const turnIndex = game.currentRoundIndex - 1;
       
       // Play the card
-      game.playCard(socket.id, cardId, isFaceUp);
+      game.playCard(playerId, cardId, isFaceUp);
       
       // Broadcast action to all clients (hiding card details if played face down)
       const currentRound = game.rounds[turnIndex];
       const latestPlay = currentRound.plays[currentRound.plays.length - 1];
       
       sm.broadcastToRoom(room.id, 'card-played', {
-        playerId: socket.id,
+        playerId,
         playerName: latestPlay.playerName,
         card: latestPlay.isFaceUp ? latestPlay.card.toJSON() : null,
         isFaceUp: latestPlay.isFaceUp
@@ -171,17 +198,17 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   // Chat handler
   socket.on('chat', (message: string) => {
     try {
-      const roomId = sm.getPlayerRoomId(socket.id);
+      const roomId = sm.getPlayerRoomId(playerId);
       if (!roomId) return;
 
       const room = rm.getRoom(roomId);
       if (!room) return;
 
-      const player = room.players.find(p => p.id === socket.id);
+      const player = room.players.find(p => p.id === playerId);
       if (!player) return;
 
       const chatMsg = {
-        playerId: socket.id,
+        playerId,
         playerName: player.name,
         message,
         timestamp: Date.now()
@@ -193,15 +220,23 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
     }
   });
 
-  // Disconnect handler
+  // Disconnect handler with 15-second grace period
   socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-    handlePlayerLeaving();
+    console.log(`Socket disconnected: ${socket.id} (Player: ${playerId})`);
+    
+    // Set a timeout to clean up player from the room after 15 seconds
+    const timeout = setTimeout(() => {
+      disconnectTimeouts.delete(playerId);
+      console.log(`Player ${playerId} grace period expired. Removing from room.`);
+      handlePlayerLeaving(playerId);
+    }, 15000);
+
+    disconnectTimeouts.set(playerId, timeout);
   });
 
   // Shared function to handle player leaving/disconnecting
-  function handlePlayerLeaving(): void {
-    const roomId = sm.getPlayerRoomId(socket.id);
+  function handlePlayerLeaving(playerIdToLeave: string): void {
+    const roomId = sm.getPlayerRoomId(playerIdToLeave);
     if (!roomId) return;
 
     try {
@@ -209,19 +244,18 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
       if (!room) return;
 
       // Remove player
-      rm.leaveRoom(roomId, socket.id);
-      sm.removePlayerRoom(socket.id);
-      socket.leave(roomId);
+      rm.leaveRoom(roomId, playerIdToLeave);
+      sm.removePlayerRoom(playerIdToLeave);
 
       // Notify others
-      socket.to(roomId).emit('player-left', { playerId: socket.id });
+      sm.broadcastToRoom(roomId, 'player-left', { playerId: playerIdToLeave });
 
       // If room still exists, update state
       if (rm.getRoom(roomId)) {
         sm.broadcastRoomUpdate(roomId);
       }
     } catch (e: any) {
-      console.error(`Error in handlePlayerLeaving for socket ${socket.id}:`, e);
+      console.error(`Error in handlePlayerLeaving for player ${playerIdToLeave}:`, e);
     }
   }
 }

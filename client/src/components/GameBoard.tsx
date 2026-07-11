@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSocket } from '../context/SocketContext';
 import { Chat } from './Chat';
-import { MessageSquare, LogOut, Shield, Clock, Eye, AlertCircle, RefreshCw } from 'lucide-react';
+import { MessageSquare, LogOut, Shield, Clock, Eye, AlertCircle, RefreshCw, Copy, Check } from 'lucide-react';
 import type { Suit, CardData, PlayerData } from '../types';
 
 export const GameBoard: React.FC = () => {
@@ -10,12 +10,20 @@ export const GameBoard: React.FC = () => {
   const { socket } = useSocket();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    if (!room) return;
+    navigator.clipboard.writeText(room.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   if (!room || !room.gameState) return null;
 
   const game = room.gameState;
   const players = room.players;
-  const myId = socket?.id || '';
+  const myId = localStorage.getItem('catte_player_id') || socket?.id || '';
   const me = players.find(p => p.id === myId);
 
   if (!me) return null;
@@ -141,7 +149,18 @@ export const GameBoard: React.FC = () => {
         <div className="flex items-center gap-3">
           <div>
             <span className="text-[10px] font-bold text-gaming-gold uppercase tracking-widest block">Phòng chơi</span>
-            <span className="text-sm font-black text-white tracking-wider">{room.name} ({room.id})</span>
+            <span 
+              onClick={handleCopyCode}
+              className="text-sm font-black text-white tracking-wider flex items-center gap-1.5 cursor-pointer hover:text-gaming-gold transition-colors"
+              title="Click để copy mã phòng"
+            >
+              {room.name} ({room.id})
+              {copied ? (
+                <Check size={11} className="text-emerald-500" />
+              ) : (
+                <Copy size={11} className="text-slate-500" />
+              )}
+            </span>
           </div>
           <div className="bg-slate-900/80 border border-slate-800/80 px-3 py-1 rounded-xl text-center">
             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Vòng chơi</span>

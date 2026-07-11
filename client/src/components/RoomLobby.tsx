@@ -2,16 +2,25 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSocket } from '../context/SocketContext';
 import { Chat } from './Chat';
-import { MessageSquare, LogOut, CheckCircle, Shield, Play, HelpCircle } from 'lucide-react';
+import { MessageSquare, LogOut, CheckCircle, Shield, Play, HelpCircle, Copy, Check } from 'lucide-react';
 
 export const RoomLobby: React.FC = () => {
   const { room, leaveRoom, setReady, setUnready, startGame } = useGame();
   const { socket } = useSocket();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    if (!room) return;
+    navigator.clipboard.writeText(room.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   if (!room) return null;
 
-  const me = room.players.find(p => p.id === socket?.id);
+  const myId = localStorage.getItem('catte_player_id') || socket?.id || '';
+  const me = room.players.find(p => p.id === myId);
   const isRoomMaster = me?.isRoomMaster || false;
 
   // Determine if start game is possible
@@ -37,10 +46,24 @@ export const RoomLobby: React.FC = () => {
               </span>
               <h2 className="text-2xl font-bold text-white mt-1.5">{room.name}</h2>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Mã Phòng</span>
-              <span className="text-2xl font-black text-gaming-gold tracking-widest">{room.id}</span>
-            </div>
+            <button 
+              onClick={handleCopyCode}
+              className="text-right hover:opacity-80 active:scale-95 transition-all group flex flex-col items-end cursor-pointer bg-transparent border-0 p-0"
+              title="Copy mã phòng"
+            >
+              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                Mã Phòng
+                {copied ? (
+                  <Check size={10} className="text-emerald-500 animate-bounce" />
+                ) : (
+                  <Copy size={10} className="text-slate-500 group-hover:text-gaming-gold transition-colors" />
+                )}
+              </span>
+              <span className="text-2xl font-black text-gaming-gold tracking-widest">
+                {room.id}
+              </span>
+              {copied && <span className="text-[9px] text-emerald-500 font-bold -mt-0.5">Đã copy!</span>}
+            </button>
           </div>
 
           {/* Player List */}
@@ -49,7 +72,7 @@ export const RoomLobby: React.FC = () => {
               Người chơi ({room.players.length}/6)
             </h3>
             {room.players.map((player) => {
-              const isCurrentMe = player.id === socket?.id;
+              const isCurrentMe = player.id === myId;
               return (
                 <div
                   key={player.id}

@@ -48,7 +48,7 @@ export const Chat: React.FC<ChatProps> = ({ isOpen, onClose }) => {
           </div>
         ) : (
           chatMessages.map((msg, idx) => {
-            const isMe = msg.playerId === socket?.id;
+            const isMe = msg.playerId === (localStorage.getItem('catte_player_id') || socket?.id || '');
             return (
               <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                 <span className="text-[10px] text-slate-500 mb-1 px-1">
