@@ -51,13 +51,43 @@ export const GameBoard: React.FC = () => {
     return suit === 'Hearts' || suit === 'Diamonds' ? 'text-red-500' : 'text-slate-300';
   };
 
-  // Get current highest winning card of the led suit in this round
+  const getCardValue = (card: CardData): number => {
+    const valMap: Record<string, number> = {
+      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+      'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14
+    };
+    return valMap[card.rank] || 0;
+  };
+
+  // Helper to get SVG path for a card
+  const getCardSvgPath = (card: CardData): string => {
+    const rankMap: Record<string, string> = {
+      'Ace': 'A', 'Jack': 'J', 'Queen': 'Q', 'King': 'K'
+    };
+    const suitMap: Record<string, string> = {
+      'Clubs': 'C', 'Diamonds': 'D', 'Hearts': 'H', 'Spades': 'S'
+    };
+    const r = rankMap[card.rank] || card.rank;
+    const s = suitMap[card.suit];
+    return `/cards/${r}${s}.svg`;
+  };
+
+  // Get current highest winning card of the led suit in this round so far
   const getHighestWinningCard = (): CardData | null => {
-    if (!currentRound || !currentRound.winnerId || currentRound.plays.length === 0) return null;
+    if (!currentRound || currentRound.plays.length === 0) return null;
     
-    // Find the play of the winner
-    const winningPlay = currentRound.plays.find(p => p.playerId === currentRound.winnerId && p.isFaceUp);
-    return winningPlay ? winningPlay.card : null;
+    let highest: CardData | null = null;
+    for (const play of currentRound.plays) {
+      if (!play.isFaceUp || !play.card) continue;
+      if (!highest) {
+        highest = play.card;
+        continue;
+      }
+      if (getCardValue(play.card) > getCardValue(highest)) {
+        highest = play.card;
+      }
+    }
+    return highest;
   };
 
   const highestCard = getHighestWinningCard();
@@ -67,14 +97,6 @@ export const GameBoard: React.FC = () => {
   const canPlayFaceUp = (card: CardData): boolean => {
     if (!suitLed) return true; // Leading can play any card face up
     return card.suit === suitLed && getCardValue(card) > (highestCard ? getCardValue(highestCard) : 0);
-  };
-
-  const getCardValue = (card: CardData): number => {
-    const valMap: Record<string, number> = {
-      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-      'Jack': 11, 'Queen': 12, 'King': 13, 'Ace': 14
-    };
-    return valMap[card.rank] || 0;
   };
 
   // Sort players to position them around the table
@@ -236,36 +258,20 @@ export const GameBoard: React.FC = () => {
                 return (
                   <div key={index} className="flex flex-col items-center relative animate-fade-in">
                     {/* Played card */}
-                    <div className="played-card w-12 h-18 bg-white border border-slate-200 rounded-lg shadow-lg flex flex-col justify-between p-1.5 relative overflow-hidden transition-all hover:scale-105">
+                    <div className="played-card w-12 h-18 bg-transparent relative transition-all hover:scale-105 shadow-md rounded-lg">
                       {play.isFaceUp && play.card ? (
-                        <>
-                          <div className="flex flex-col items-start leading-none">
-                            <span className={`text-sm font-black ${getSuitColor(play.card.suit)}`}>
-                              {getRankShort(play.card.rank)}
-                            </span>
-                            <span className={`text-xs ${getSuitColor(play.card.suit)}`}>
-                              {getSuitSymbol(play.card.suit)}
-                            </span>
-                          </div>
-                          <div className={`text-xl self-center leading-none ${getSuitColor(play.card.suit)}`}>
-                            {getSuitSymbol(play.card.suit)}
-                          </div>
-                          <div className="flex flex-col items-end leading-none rotate-180">
-                            <span className={`text-sm font-black ${getSuitColor(play.card.suit)}`}>
-                              {getRankShort(play.card.rank)}
-                            </span>
-                            <span className={`text-xs ${getSuitColor(play.card.suit)}`}>
-                              {getSuitSymbol(play.card.suit)}
-                            </span>
-                          </div>
-                        </>
+                        <img 
+                          src={getCardSvgPath(play.card)} 
+                          className="w-full h-full object-contain pointer-events-none select-none rounded-lg" 
+                          alt={`${play.card.rank} of ${play.card.suit}`} 
+                        />
                       ) : (
                         // Card back for face-down card (thiệp)
-                        <div className="absolute inset-0 bg-red-800 border-[3px] border-white flex justify-center items-center">
-                          <div className="w-[85%] h-[85%] border border-red-650 rounded bg-red-900 flex justify-center items-center">
-                            <span className="text-white/20 font-black text-[10px]">CÁT TÊ</span>
-                          </div>
-                        </div>
+                        <img 
+                          src="/cards/back.svg" 
+                          className="w-full h-full object-contain pointer-events-none select-none rounded-lg" 
+                          alt="Face down card" 
+                        />
                       )}
                     </div>
                     <span className="text-[10px] text-slate-400 font-bold mt-1 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-900/60 max-w-[80px] truncate">
@@ -587,7 +593,7 @@ export const GameBoard: React.FC = () => {
                       : 'bg-slate-900 text-slate-500 border border-slate-850 cursor-not-allowed'
                   }`}
                 >
-                  ĐÁNH BÀI (CHẶN)
+                  {game.currentRoundIndex === 5 ? 'BẮT ĐÈ' : 'ĐÁNH BÀI (CHẶN)'}
                 </button>
                 <button
                   onClick={() => handlePlaySelected(false)}
@@ -602,7 +608,7 @@ export const GameBoard: React.FC = () => {
                 onClick={() => handlePlaySelected(true)}
                 className="bg-gradient-to-r from-gaming-gold-dark via-gaming-gold to-gaming-gold-light text-slate-950 px-8 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-gold-glow hover:brightness-110 active:scale-95 transition-all"
               >
-                ĐÁNH BÀI (DẪN ĐẦU)
+                {game.currentRoundIndex === 5 ? 'CHƯNG BÀI' : 'ĐÁNH BÀI (DẪN ĐẦU)'}
               </button>
             )}
           </div>
@@ -611,14 +617,14 @@ export const GameBoard: React.FC = () => {
         {/* Selected card alert/helper message */}
         {selectedCardId && isMyTurn && game.status !== 'RESULT' && !suitLed && (
           <p className="text-[10px] text-gaming-gold/80 mb-3 font-semibold uppercase tracking-wider flex items-center gap-1">
-            <AlertCircle size={12} /> Bạn đang dẫn đầu vòng chơi này. Phải đi bài ngửa!
+            <AlertCircle size={12} /> {game.currentRoundIndex === 5 ? 'Bạn là người chưng bài ở vòng này. Phải đi bài ngửa!' : 'Bạn đang dẫn đầu vòng chơi này. Phải đi bài ngửa!'}
           </p>
         )}
 
         {/* Selected card help in defense */}
         {selectedCardId && isMyTurn && game.status !== 'RESULT' && suitLed && (
           <p className="text-[10px] text-slate-400 mb-3 font-semibold uppercase tracking-wider flex items-center gap-1">
-            <Eye size={12} /> Chọn Đánh bài (nếu muốn chặn) hoặc Úp bài (nhường lượt).
+            <Eye size={12} /> {game.currentRoundIndex === 5 ? 'Chọn Bắt đè (nếu muốn chặn bài Chưng) hoặc Úp bài (nhường lượt).' : 'Chọn Đánh bài (nếu muốn chặn) hoặc Úp bài (nhường lượt).'}
           </p>
         )}
 
@@ -635,31 +641,15 @@ export const GameBoard: React.FC = () => {
                   disabled={!isTurnPlayable}
                   onClick={() => setSelectedCardId(isSelected ? null : card.id)}
                   style={{ animationDelay: `${index * 100}ms` }}
-                  className={`hand-card w-16 h-24 bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col justify-between p-2 relative overflow-hidden transition-all duration-200 transform animate-deal ${
-                    isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow' : ''
+                  className={`hand-card w-16 h-24 bg-transparent border-0 relative transition-all duration-200 transform animate-deal ${
+                    isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow rounded-xl' : ''
                   } ${isTurnPlayable ? 'hover:-translate-y-2 cursor-pointer' : 'opacity-85'}`}
                 >
-                  <div className="flex flex-col items-start leading-none">
-                    <span className={`text-base font-black ${getSuitColor(card.suit)}`}>
-                      {getRankShort(card.rank)}
-                    </span>
-                    <span className={`text-xs ${getSuitColor(card.suit)}`}>
-                      {getSuitSymbol(card.suit)}
-                    </span>
-                  </div>
-                  
-                  <div className={`text-2xl self-center leading-none ${getSuitColor(card.suit)}`}>
-                    {getSuitSymbol(card.suit)}
-                  </div>
-                  
-                  <div className="flex flex-col items-end leading-none rotate-180">
-                    <span className={`text-base font-black ${getSuitColor(card.suit)}`}>
-                      {getRankShort(card.rank)}
-                    </span>
-                    <span className={`text-xs ${getSuitColor(card.suit)}`}>
-                      {getSuitSymbol(card.suit)}
-                    </span>
-                  </div>
+                  <img 
+                    src={getCardSvgPath(card)} 
+                    className="w-full h-full object-contain pointer-events-none select-none rounded-xl" 
+                    alt={`${card.rank} of ${card.suit}`} 
+                  />
                 </button>
               );
             })
