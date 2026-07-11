@@ -110,12 +110,12 @@ export const GameBoard: React.FC = () => {
 
   // Map seatIndex to absolute positions (relative to the Felt Table Oval container)
   const seatPositions: Record<number, string> = {
-    0: 'bottom-2 left-1/2 -translate-x-1/2', // Current player (bottom)
-    1: 'bottom-[18%] left-2', // Bottom left
-    2: 'top-[18%] left-2',    // Top left
-    3: 'top-2 left-1/2 -translate-x-1/2',    // Top center
-    4: 'top-[18%] right-2',   // Top right
-    5: 'bottom-[18%] right-2', // Bottom right
+    0: 'bottom-2 left-1/2 -translate-x-1/2', // Current player (bottom center)
+    1: 'top-1/2 left-2 -translate-y-1/2', // Middle left
+    2: 'top-2 left-[18%]', // Top left
+    3: 'top-2 left-1/2 -translate-x-1/2', // Top center
+    4: 'top-2 right-[18%]', // Top right
+    5: 'top-1/2 right-2 -translate-y-1/2', // Middle right
   };
 
   // Format rank abbreviation
@@ -181,7 +181,7 @@ export const GameBoard: React.FC = () => {
       <div className="flex-1 w-full max-w-4xl relative flex items-center justify-center py-6 px-4">
         
         {/* The Felt Table Oval */}
-        <div className="absolute w-[95%] h-[80%] bg-gradient-to-b from-gaming-green-felt to-gaming-green-deep border-[16px] border-slate-900/90 rounded-[100px] shadow-board flex flex-col justify-center items-center">
+        <div className="felt-table-oval absolute w-[95%] h-[80%] bg-gradient-to-b from-gaming-green-felt to-gaming-green-deep border-[16px] border-slate-900/90 rounded-[100px] shadow-board flex flex-col justify-center items-center">
           
           {/* Decorative Table Felt Logo */}
           <div className="absolute opacity-5 pointer-events-none select-none text-center">
@@ -190,7 +190,7 @@ export const GameBoard: React.FC = () => {
           </div>
 
           {/* Center Play Area */}
-          <div className="w-[60%] h-[50%] relative flex flex-col justify-center items-center bg-slate-950/20 border border-white/5 rounded-[50px] p-4">
+          <div className="center-play-area w-[60%] h-[50%] relative flex flex-col justify-center items-center bg-slate-950/20 border border-white/5 rounded-[50px] p-4">
             
             {/* Suit Led indicator */}
             {suitLed && (
@@ -217,7 +217,7 @@ export const GameBoard: React.FC = () => {
                 return (
                   <div key={index} className="flex flex-col items-center relative animate-fade-in">
                     {/* Played card */}
-                    <div className="w-12 h-18 bg-white border border-slate-200 rounded-lg shadow-lg flex flex-col justify-between p-1.5 relative overflow-hidden transition-all hover:scale-105">
+                    <div className="played-card w-12 h-18 bg-white border border-slate-200 rounded-lg shadow-lg flex flex-col justify-between p-1.5 relative overflow-hidden transition-all hover:scale-105">
                       {play.isFaceUp && play.card ? (
                         <>
                           <div className="flex flex-col items-start leading-none">
@@ -313,15 +313,15 @@ export const GameBoard: React.FC = () => {
                         KHÔNG CÓ TÙNG
                       </span>
                     )}
-                  </div>
 
-                  {/* Player hand count display */}
-                  {!isPlayerMe && !isEliminated && (
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-center flex items-center gap-1.5 ml-2.5">
-                      <span className="text-[10px] text-slate-400 font-extrabold">{player.cardsCount}</span>
-                      <div className="w-3 h-4 bg-red-800 rounded-sm border border-white/50" />
-                    </div>
-                  )}
+                    {/* Player hand count display (below the player info) */}
+                    {!isPlayerMe && !isEliminated && (
+                      <div className="flex items-center gap-1 mt-0.5 text-red-400 font-bold text-[9px]">
+                        <span>Còn: {player.cardsCount} lá</span>
+                        <div className="w-2.5 h-3.5 bg-red-800 rounded-sm border border-white/30" />
+                      </div>
+                    )}
+                  </div>
 
                   {isEliminated && (
                     <span className="text-[9px] font-extrabold text-red-400 bg-red-950/30 border border-red-500/20 px-2 py-0.5 rounded-lg ml-2 uppercase">
@@ -616,7 +616,7 @@ export const GameBoard: React.FC = () => {
                   disabled={!isTurnPlayable}
                   onClick={() => setSelectedCardId(isSelected ? null : card.id)}
                   style={{ animationDelay: `${index * 100}ms` }}
-                  className={`w-16 h-24 bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col justify-between p-2 relative overflow-hidden transition-all duration-200 transform animate-deal ${
+                  className={`hand-card w-16 h-24 bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col justify-between p-2 relative overflow-hidden transition-all duration-200 transform animate-deal ${
                     isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow' : ''
                   } ${isTurnPlayable ? 'hover:-translate-y-2 cursor-pointer' : 'opacity-85'}`}
                 >
