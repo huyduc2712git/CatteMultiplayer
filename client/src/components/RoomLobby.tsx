@@ -19,7 +19,7 @@ export const RoomLobby: React.FC = () => {
 
   if (!room) return null;
 
-  const myId = localStorage.getItem('catte_player_id') || socket?.id || '';
+  const myId = sessionStorage.getItem('catte_player_id') || socket?.id || '';
   const me = room.players.find(p => p.id === myId);
   const isRoomMaster = me?.isRoomMaster || false;
 

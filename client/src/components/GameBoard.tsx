@@ -23,7 +23,7 @@ export const GameBoard: React.FC = () => {
 
   const game = room.gameState;
   const players = room.players;
-  const myId = localStorage.getItem('catte_player_id') || socket?.id || '';
+  const myId = sessionStorage.getItem('catte_player_id') || socket?.id || '';
   const me = players.find(p => p.id === myId);
 
   if (!me) return null;

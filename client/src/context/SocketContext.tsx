@@ -18,11 +18,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Generate or retrieve persistent player ID
-    let persistentId = localStorage.getItem('catte_player_id');
+    // Generate or retrieve persistent player ID (isolated per tab using sessionStorage)
+    let persistentId = sessionStorage.getItem('catte_player_id');
     if (!persistentId) {
       persistentId = 'p_' + Math.random().toString(36).substring(2, 11);
-      localStorage.setItem('catte_player_id', persistentId);
+      sessionStorage.setItem('catte_player_id', persistentId);
     }
 
     const socketUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
