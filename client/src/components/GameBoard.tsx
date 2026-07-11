@@ -190,7 +190,7 @@ export const GameBoard: React.FC = () => {
           </div>
 
           {/* Center Play Area */}
-          <div className="center-play-area w-[60%] h-[50%] relative flex flex-col justify-center items-center bg-slate-950/20 border border-white/5 rounded-[50px] p-4">
+          <div className="center-play-area absolute w-[60%] h-[50%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col justify-center items-center bg-slate-950/20 border border-white/5 rounded-[50px] p-4">
             
             {/* Suit Led indicator */}
             {suitLed && (

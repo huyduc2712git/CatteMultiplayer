@@ -1,0 +1,16 @@
+{
+  "short_name": "Cát Tê",
+  "name": "Cát Tê Realtime Gaming Arena",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#042c1b",
+  "theme_color": "#042c1b",
+  "display": "standalone",
+  "orientation": "landscape"
+}
