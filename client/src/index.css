@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-gaming-green-deep: #062F1E;
+  --color-gaming-green-felt: #0A4A32;
+  --color-gaming-green-light: #1B6A4C;
+  
+  --color-gaming-gold: #D4AF37;
+  --color-gaming-gold-light: #F3E5AB;
+  --color-gaming-gold-dark: #AA7C11;
+  
+  --color-gaming-slate-deep: #0B0F19;
+  --color-gaming-slate-card: #161F30;
+  
+  --font-sans: 'Outfit', 'Inter', 'system-ui', 'sans-serif';
+  
+  --shadow-board: inset 0 0 100px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-gold-glow: 0 0 15px rgba(212, 175, 55, 0.4);
+  --shadow-active-glow: 0 0 20px rgba(16, 185, 129, 0.6);
+}
+
+
+body {
+  margin: 0;
+  background-color: #0b0f19;
+  color: #e2e8f0;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Webkit scrollbar for premium theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Premium Keyframe Animations */
+@keyframes deal-card {
+  0% {
+    transform: translate(-50%, -150%) scale(0.3) rotate(30deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-deal {
+  animation: deal-card 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes play-card-animation {
+  0% {
+    transform: translateY(100px) scale(1.3);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-play-card {
+  animation: play-card-animation 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) both;
+}
+
+@keyframes fade-in-scale {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in-scale 0.3s ease-out both;
+}
+
+@keyframes slide-up-control {
+  0% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-control 0.25s cubic-bezier(0.165, 0.84, 0.44, 1) both;
+}
+
+@keyframes gold-pulse-anim {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+    border-color: rgba(212, 175, 55, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.85);
+    border-color: rgba(212, 175, 55, 1);
+  }
+}
+
+.animate-gold-pulse {
+  animation: gold-pulse-anim 2s infinite;
+}
+

@@ -1,0 +1,13 @@
+{
+  "name": "catte-multiplayer",
+  "version": "1.0.0",
+  "description": "Catte Multiplayer Fullstack Game",
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
