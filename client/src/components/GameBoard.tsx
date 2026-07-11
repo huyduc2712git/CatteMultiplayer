@@ -108,15 +108,14 @@ export const GameBoard: React.FC = () => {
 
   const posPlayers = getPositionedPlayers();
 
-  // Map seatIndex to absolute positions (percentage based for responsive board)
-  // Adjusted spacing to prevent overlapping on mobile screens
+  // Map seatIndex to absolute positions (relative to the Felt Table Oval container)
   const seatPositions: Record<number, string> = {
-    0: 'bottom-4 left-1/2 -translate-x-1/2', // Current player (bottom)
-    1: 'bottom-[22%] left-4 -translate-y-1/2', // Bottom left
-    2: 'top-[22%] left-4 -translate-y-1/2',    // Top left
-    3: 'top-4 left-1/2 -translate-x-1/2',    // Top center
-    4: 'top-[22%] right-4 -translate-y-1/2',   // Top right
-    5: 'bottom-[22%] right-4 -translate-y-1/2', // Bottom right
+    0: 'bottom-2 left-1/2 -translate-x-1/2', // Current player (bottom)
+    1: 'bottom-[18%] left-2', // Bottom left
+    2: 'top-[18%] left-2',    // Top left
+    3: 'top-2 left-1/2 -translate-x-1/2',    // Top center
+    4: 'top-[18%] right-2',   // Top right
+    5: 'bottom-[18%] right-2', // Bottom right
   };
 
   // Format rank abbreviation
@@ -265,145 +264,137 @@ export const GameBoard: React.FC = () => {
             </div>
 
           </div>
-        </div>
 
-        {/* Players Seats layout around the felt table */}
-        {posPlayers.map(({ player, seatIndex }) => {
-          const isTurn = game.turnPlayerId === player.id;
-          const posClass = seatPositions[seatIndex];
-          const isPlayerMe = player.id === myId;
-          const isEliminated = player.status === 'ELIMINATED';
+          {/* Players Seats layout around the felt table (positioned relative to Felt Table borders) */}
+          {posPlayers.map(({ player, seatIndex }) => {
+            const isTurn = game.turnPlayerId === player.id;
+            const posClass = seatPositions[seatIndex];
+            const isPlayerMe = player.id === myId;
+            const isEliminated = player.status === 'ELIMINATED';
 
-          return (
-            <div
-              key={player.id}
-              className={`absolute ${posClass} z-10 flex flex-col items-center transition-all duration-300`}
-            >
-              {/* Player Avatar card */}
+            return (
               <div
-                className={`relative flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-950/90 shadow-lg ${
-                  isTurn
-                    ? 'border-gaming-gold animate-gold-pulse scale-105'
-                    : isPlayerMe
-                    ? 'border-gaming-green-light bg-gaming-green-deep/90'
-                    : 'border-slate-800'
-                } ${isEliminated ? 'opacity-40 brightness-75' : ''}`}
+                key={player.id}
+                className={`absolute ${posClass} z-10 flex flex-col items-center transition-all duration-300`}
               >
-                {/* Active Indicator */}
-                {isTurn && (
-                  <div className="absolute -top-1 -right-1 bg-gaming-gold text-slate-950 p-1 rounded-full shadow-gold-glow animate-spin">
-                    <RefreshCw size={10} />
+                {/* Player Avatar card */}
+                <div
+                  className={`relative flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-950/90 shadow-lg ${
+                    isTurn
+                      ? 'border-gaming-gold animate-gold-pulse scale-105'
+                      : isPlayerMe
+                      ? 'border-gaming-green-light bg-gaming-green-deep/90'
+                      : 'border-slate-800'
+                  } ${isEliminated ? 'opacity-40 brightness-75' : ''}`}
+                >
+                  {/* Active Indicator */}
+                  {isTurn && (
+                    <div className="absolute -top-1 -right-1 bg-gaming-gold text-slate-950 p-1 rounded-full shadow-gold-glow animate-spin">
+                      <RefreshCw size={10} />
+                    </div>
+                  )}
+
+                  {/* Avatar Initial */}
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-sm font-bold text-slate-200 border border-slate-800">
+                    {player.name.charAt(0).toUpperCase()}
                   </div>
-                )}
 
-                {/* Avatar Initial */}
-                <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-sm font-bold text-slate-200 border border-slate-800">
-                  {player.name.charAt(0).toUpperCase()}
-                </div>
-
-                <div>
-                  <span className="font-extrabold text-xs text-white flex items-center gap-1">
-                    {player.name}
-                    {player.isRoomMaster && <Shield size={10} className="text-gaming-gold" fill="currentColor" />}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {/* Round Won indicator dots */}
-                    {player.roundsWon.map((r, i) => (
-                      <span
-                        key={i}
-                        title={`Thắng vòng ${r}`}
-                        className="w-1.5 h-1.5 rounded-full bg-gaming-gold inline-block animate-ping"
-                      />
-                    ))}
-                    {player.roundsWon.length === 0 && (
-                      <span className="text-[9px] text-slate-500 font-semibold uppercase">Không có tùng</span>
-                    )}
-                    {player.roundsWon.length > 0 && (
-                      <span className="text-[9px] text-gaming-gold font-bold uppercase tracking-wider ml-1">
-                        Có tùng ({player.roundsWon.length})
+                  <div>
+                    <span className="font-extrabold text-xs text-white flex items-center gap-1">
+                      {player.name}
+                      {player.isRoomMaster && <Shield size={10} className="text-gaming-gold" fill="currentColor" />}
+                    </span>
+                    {player.roundsWon.length > 0 ? (
+                      <span className="text-[9px] text-gaming-gold font-bold flex items-center gap-0.5">
+                        ★ {player.roundsWon.length} Tồn
+                      </span>
+                    ) : (
+                      <span className="text-[8px] text-slate-500 font-semibold block">
+                        KHÔNG CÓ TÙNG
                       </span>
                     )}
                   </div>
+
+                  {/* Player hand count display */}
+                  {!isPlayerMe && !isEliminated && (
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-center flex items-center gap-1.5 ml-2.5">
+                      <span className="text-[10px] text-slate-400 font-extrabold">{player.cardsCount}</span>
+                      <div className="w-3 h-4 bg-red-800 rounded-sm border border-white/50" />
+                    </div>
+                  )}
+
+                  {isEliminated && (
+                    <span className="text-[9px] font-extrabold text-red-400 bg-red-950/30 border border-red-500/20 px-2 py-0.5 rounded-lg ml-2 uppercase">
+                      CHẾT TÙNG
+                    </span>
+                  )}
                 </div>
 
-                {/* Player hand count display */}
-                {!isPlayerMe && !isEliminated && (
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl px-2 py-1 text-center flex items-center gap-1.5 ml-2.5">
-                    <span className="text-[10px] text-slate-400 font-extrabold">{player.cardsCount}</span>
-                    <div className="w-3 h-4 bg-red-800 rounded-sm border border-white/50" />
-                  </div>
-                )}
-
-                {isEliminated && (
-                  <span className="text-[9px] font-extrabold text-red-400 bg-red-950/30 border border-red-500/20 px-2 py-0.5 rounded-lg ml-2 uppercase">
-                    CHẾT TÙNG
-                  </span>
-                )}
+                {/* Round History Tray (Responsive Grid: 3 columns on mobile, 6 columns on tablet/desktop) */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mt-2 bg-slate-950/80 border border-slate-900/80 p-1.5 rounded-xl shadow-md">
+                  {[1, 2, 3, 4, 5, 6].map((roundNum) => {
+                    const play = getPlayerPlayForRound(player.id, roundNum);
+                    const isCurrentRound = game.currentRoundIndex === roundNum;
+                    const isWinner = game.rounds[roundNum - 1]?.winnerId === player.id;
+                    
+                    if (play) {
+                      return (
+                        <div
+                          key={roundNum}
+                          className={`w-7 h-10 rounded-md flex flex-col justify-between items-center p-0.5 relative text-[9px] font-bold ${
+                            play.isFaceUp
+                              ? `bg-white text-slate-950 border ${isWinner ? 'border-gaming-gold ring-1 ring-gaming-gold shadow-gold-glow' : 'border-slate-350'}`
+                              : 'bg-red-800 border border-red-750 text-white'
+                          }`}
+                        >
+                          {play.isFaceUp && play.card ? (
+                            <>
+                              <span className={getSuitColor(play.card.suit)}>
+                                {getRankShort(play.card.rank)}
+                              </span>
+                              <span className={`text-[10px] leading-none ${getSuitColor(play.card.suit)}`}>
+                                {getSuitSymbol(play.card.suit)}
+                              </span>
+                            </>
+                          ) : (
+                            // Mini card back for thiệp
+                            <div className="w-full h-full bg-red-800 rounded flex items-center justify-center text-[7px] text-white/70">
+                              Úp
+                            </div>
+                          )}
+                          {/* Winner/Tồn Crown Indicator */}
+                          {isWinner && (
+                            <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-gaming-gold rounded-full border border-slate-950 flex items-center justify-center text-[7px] text-slate-950 font-black">
+                              ★
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      // No play yet
+                      const isPast = roundNum < game.currentRoundIndex;
+                      return (
+                        <div
+                          key={roundNum}
+                          className={`w-7 h-10 rounded-md border flex items-center justify-center text-[8px] font-bold ${
+                            isCurrentRound
+                              ? 'border-gaming-gold/60 border-dashed animate-pulse text-gaming-gold'
+                              : isPast
+                              ? 'border-slate-800 bg-slate-900/30 text-slate-600'
+                              : 'border-slate-850 bg-slate-900/10 text-slate-700'
+                          }`}
+                        >
+                          {isPast ? 'X' : roundNum}
+                        </div>
+                      );
+                    }
+                  })}
+                </div>
               </div>
+            );
+          })}
 
-              {/* Round History Tray */}
-              <div className="flex gap-1 mt-2 bg-slate-950/80 border border-slate-900/80 p-1.5 rounded-xl">
-                {[1, 2, 3, 4, 5, 6].map((roundNum) => {
-                  const play = getPlayerPlayForRound(player.id, roundNum);
-                  const isCurrentRound = game.currentRoundIndex === roundNum;
-                  const isWinner = game.rounds[roundNum - 1]?.winnerId === player.id;
-                  
-                  if (play) {
-                    return (
-                      <div
-                        key={roundNum}
-                        className={`w-7 h-10 rounded-md flex flex-col justify-between items-center p-0.5 relative text-[9px] font-bold ${
-                          play.isFaceUp
-                            ? `bg-white text-slate-950 border ${isWinner ? 'border-gaming-gold ring-1 ring-gaming-gold shadow-gold-glow' : 'border-slate-350'}`
-                            : 'bg-red-800 border border-red-750 text-white'
-                        }`}
-                      >
-                        {play.isFaceUp && play.card ? (
-                          <>
-                            <span className={getSuitColor(play.card.suit)}>
-                              {getRankShort(play.card.rank)}
-                            </span>
-                            <span className={`text-[10px] leading-none ${getSuitColor(play.card.suit)}`}>
-                              {getSuitSymbol(play.card.suit)}
-                            </span>
-                          </>
-                        ) : (
-                          // Mini card back for thiệp
-                          <div className="w-full h-full bg-red-800 rounded flex items-center justify-center text-[7px] text-white/70">
-                            Úp
-                          </div>
-                        )}
-                        {/* Winner/Tồn Crown Indicator */}
-                        {isWinner && (
-                          <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-gaming-gold rounded-full border border-slate-950 flex items-center justify-center text-[7px] text-slate-950 font-black">
-                            ★
-                          </div>
-                        )}
-                      </div>
-                    );
-                  } else {
-                    // No play yet
-                    const isPast = roundNum < game.currentRoundIndex;
-                    return (
-                      <div
-                        key={roundNum}
-                        className={`w-7 h-10 rounded-md border flex items-center justify-center text-[8px] font-bold ${
-                          isCurrentRound
-                            ? 'border-gaming-gold/60 border-dashed animate-pulse text-gaming-gold'
-                            : isPast
-                            ? 'border-slate-800 bg-slate-900/30 text-slate-600'
-                            : 'border-slate-850 bg-slate-900/10 text-slate-700'
-                        }`}
-                      >
-                        {isPast ? 'X' : roundNum}
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            </div>
-          );
-        })}
+        </div>
 
         {/* RESULTS OVERLAY ON TOP OF TABLE */}
         {game.status === 'RESULT' && (
