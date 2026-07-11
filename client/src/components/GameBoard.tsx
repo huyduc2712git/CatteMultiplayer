@@ -279,7 +279,7 @@ export const GameBoard: React.FC = () => {
               >
                 {/* Player Avatar card */}
                 <div
-                  className={`relative flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-950/90 shadow-lg ${
+                  className={`game-avatar-card relative flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-950/90 shadow-lg ${
                     isTurn
                       ? 'border-gaming-gold animate-gold-pulse scale-105'
                       : isPlayerMe
@@ -341,7 +341,7 @@ export const GameBoard: React.FC = () => {
                       return (
                         <div
                           key={roundNum}
-                          className={`w-7 h-10 rounded-md flex flex-col justify-between items-center p-0.5 relative text-[9px] font-bold ${
+                          className={`game-history-slot w-7 h-10 rounded-md flex flex-col justify-between items-center p-0.5 relative text-[9px] font-bold ${
                             play.isFaceUp
                               ? `bg-white text-slate-950 border ${isWinner ? 'border-gaming-gold ring-1 ring-gaming-gold shadow-gold-glow' : 'border-slate-350'}`
                               : 'bg-red-800 border border-red-750 text-white'
@@ -376,7 +376,7 @@ export const GameBoard: React.FC = () => {
                       return (
                         <div
                           key={roundNum}
-                          className={`w-7 h-10 rounded-md border flex items-center justify-center text-[8px] font-bold ${
+                          className={`game-history-slot w-7 h-10 rounded-md border flex items-center justify-center text-[8px] font-bold ${
                             isCurrentRound
                               ? 'border-gaming-gold/60 border-dashed animate-pulse text-gaming-gold'
                               : isPast
@@ -617,7 +617,7 @@ export const GameBoard: React.FC = () => {
                   onClick={() => setSelectedCardId(isSelected ? null : card.id)}
                   style={{ animationDelay: `${index * 100}ms` }}
                   className={`w-16 h-24 bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col justify-between p-2 relative overflow-hidden transition-all duration-200 transform animate-deal ${
-                    isSelected ? '-translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow' : ''
+                    isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow' : ''
                   } ${isTurnPlayable ? 'hover:-translate-y-2 cursor-pointer' : 'opacity-85'}`}
                 >
                   <div className="flex flex-col items-start leading-none">

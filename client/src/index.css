@@ -124,3 +124,102 @@ body {
   animation: gold-pulse-anim 2s infinite;
 }
 
+@media (max-height: 520px) {
+  /* Reduce padding of table layout area to gain height */
+  .py-6 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  
+  /* Felt Table Oval height adjustment */
+  .h-\[80\%\] {
+    height: 94% !important;
+  }
+
+  /* Make user hand cards much smaller in landscape mode */
+  .w-16.h-24 {
+    width: 2.75rem !important; /* 44px */
+    height: 4rem !important;    /* 64px */
+    border-radius: 0.5rem !important;
+    padding: 0.35rem !important;
+  }
+  .w-16.h-24 .text-base {
+    font-size: 0.75rem !important;
+  }
+  .w-16.h-24 .text-2xl {
+    font-size: 1.1rem !important;
+  }
+  .w-16.h-24 .text-xs {
+    font-size: 0.5rem !important;
+  }
+  .w-16.h-24.isSelected {
+    transform: translateY(-1rem) !important;
+  }
+
+  /* Scale down player avatar cards */
+  .game-avatar-card {
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 0.75rem !important;
+    gap: 0.35rem !important;
+  }
+  .game-avatar-card .w-8.h-8 {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    border-radius: 0.35rem !important;
+    font-size: 0.7rem !important;
+  }
+  .game-avatar-card .text-xs {
+    font-size: 0.65rem !important;
+  }
+  .game-avatar-card .text-\[9px\] {
+    font-size: 0.55rem !important;
+  }
+  
+  /* Scale down history slots so they fit vertically */
+  .game-history-slot {
+    width: 1.25rem !important; /* 20px */
+    height: 1.75rem !important; /* 28px */
+    font-size: 0.55rem !important;
+    border-radius: 0.25rem !important;
+  }
+  .game-history-slot .text-\[10px\] {
+    font-size: 0.6rem !important;
+  }
+  .game-history-slot .text-\[7px\] {
+    font-size: 0.5rem !important;
+  }
+  
+  /* Scale down central played cards */
+  .w-12.h-18 {
+    width: 2rem !important; /* 32px */
+    height: 3rem !important; /* 48px */
+    padding: 0.25rem !important;
+    border-radius: 0.35rem !important;
+  }
+  .w-12.h-18 .text-sm {
+    font-size: 0.6rem !important;
+  }
+  .w-12.h-18 .text-xl {
+    font-size: 0.8rem !important;
+  }
+  .w-12.h-18 .text-xs {
+    font-size: 0.45rem !important;
+  }
+  .w-12.h-18 .rotate-180 {
+    display: none !important; /* Hide reverse text on very small cards to keep readable */
+  }
+
+  /* Make user controls area more compact */
+  .p-4 {
+    padding: 0.5rem !important;
+  }
+  
+  /* Limit center play area dimensions so seats have space */
+  .w-\[60\%\] {
+    width: 50% !important;
+  }
+  .h-\[50\%\] {
+    height: 40% !important;
+  }
+}
+
