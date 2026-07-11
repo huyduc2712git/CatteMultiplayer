@@ -3,7 +3,8 @@ import { SocketManager } from '../managers/SocketManager';
 import { RoomManager } from '../managers/RoomManager';
 import { Player } from '../core/Player';
 
-// Module-level map to track disconnected players during the grace period
+// Module-level maps to track active socket connections and disconnect timeouts
+const activePlayerSockets = new Map<string, string>();
 const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
 export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
@@ -15,14 +16,16 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
   // Make the socket join its own playerId room so sm.sendToPlayer can send direct messages to it
   socket.join(playerId);
 
-  console.log(`Socket associated: ${socket.id} -> Player: ${playerId}`);
+  // Register this socket as the active connection for the player
+  activePlayerSockets.set(playerId, socket.id);
+  console.log(`Socket associated: ${socket.id} -> Player: ${playerId} (Active)`);
 
-  // If this player was recently disconnected, clear the removal timeout and re-add them to room channel
+  // If this player was recently disconnected, clear the removal timeout
   const existingTimeout = disconnectTimeouts.get(playerId);
   if (existingTimeout) {
     clearTimeout(existingTimeout);
     disconnectTimeouts.delete(playerId);
-    console.log(`Player ${playerId} reconnected within grace period.`);
+    console.log(`Player ${playerId} reconnected within grace period. Cancelled removal.`);
 
     const roomId = sm.getPlayerRoomId(playerId);
     if (roomId) {
@@ -220,18 +223,25 @@ export function handleSocketEvents(socket: Socket, sm: SocketManager): void {
     }
   });
 
-  // Disconnect handler with 15-second grace period
+  // Disconnect handler with 15-second grace period and race-condition checks
   socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id} (Player: ${playerId})`);
-    
-    // Set a timeout to clean up player from the room after 15 seconds
-    const timeout = setTimeout(() => {
-      disconnectTimeouts.delete(playerId);
-      console.log(`Player ${playerId} grace period expired. Removing from room.`);
-      handlePlayerLeaving(playerId);
-    }, 15000);
+    // Only schedule cleanup if the disconnecting socket is the one currently registered as active!
+    const currentActiveSocketId = activePlayerSockets.get(playerId);
+    if (currentActiveSocketId === socket.id) {
+      console.log(`Socket disconnected: ${socket.id} (Player: ${playerId}). Scheduling cleanup...`);
+      
+      // Set a timeout to clean up player from the room after 15 seconds
+      const timeout = setTimeout(() => {
+        disconnectTimeouts.delete(playerId);
+        activePlayerSockets.delete(playerId);
+        console.log(`Player ${playerId} grace period expired. Removing from room.`);
+        handlePlayerLeaving(playerId);
+      }, 15000);
 
-    disconnectTimeouts.set(playerId, timeout);
+      disconnectTimeouts.set(playerId, timeout);
+    } else {
+      console.log(`Ignored disconnect for stale socket: ${socket.id} (Player: ${playerId})`);
+    }
   });
 
   // Shared function to handle player leaving/disconnecting
