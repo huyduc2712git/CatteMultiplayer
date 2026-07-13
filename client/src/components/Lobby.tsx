@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import { Club, Diamond, Heart, Spade, Award, Play } from 'lucide-react';
 
 export const Lobby: React.FC = () => {
-  const { createRoom, joinRoom, error, clearError } = useGame();
+  const { createRoom, joinRoom, error, clearError, setupMockRoom } = useGame();
   const [playerName, setPlayerName] = useState('');
   const [roomName, setRoomName] = useState('');
   const [roomIdInput, setRoomIdInput] = useState('');
@@ -94,6 +94,27 @@ export const Lobby: React.FC = () => {
             >
               Tham Gia Bằng Mã
             </button>
+
+            {/* UI Test Tool Section */}
+            <div className="border-t border-slate-900/60 my-4 pt-4">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 text-center">
+                Chạy Thử Nghiệm Giao Diện (UI)
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {[2, 3, 4, 5, 6].map(count => (
+                  <button
+                    key={count}
+                    onClick={() => {
+                      setupMockRoom(count);
+                    }}
+                    className="bg-slate-900 hover:bg-gaming-green-felt/35 border border-slate-800 text-slate-300 hover:text-gaming-gold py-2.5 rounded-xl font-black text-xs transition-all active:scale-90 flex flex-col items-center justify-center cursor-pointer"
+                    title={`Xem bàn chơi ${count} người`}
+                  >
+                    <span>{count} Người</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

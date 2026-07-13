@@ -222,3 +222,70 @@ body {
   }
 }
 
+/* Device orientation lock warning */
+.orientation-warning {
+  display: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .orientation-warning {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #062f1e 0%, #03180f 100%);
+    color: white;
+    z-index: 999999;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  
+  .orientation-warning-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    animation: rotate-device 2s ease-in-out infinite;
+  }
+}
+
+@keyframes rotate-device {
+  0% {
+    transform: rotate(0deg);
+  }
+  50%, 100% {
+    transform: rotate(-90deg);
+  }
+}
+
+/* Custom played stack cards */
+.played-stack-card {
+  width: 2.75rem; /* 44px */
+  height: 4rem; /* 64px */
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@media (max-height: 768px) {
+  .played-stack-card {
+    width: 1.85rem !important; /* ~30px */
+    height: 2.75rem !important; /* ~44px */
+  }
+}
+
+/* Turn start shake micro-animation */
+@keyframes turn-shake {
+  0%, 100% { transform: scale(1.05) translate(0, 0); }
+  20%, 60% { transform: scale(1.05) translate(-4px, 0); }
+  40%, 80% { transform: scale(1.05) translate(4px, 0); }
+}
+
+.animate-turn-shake {
+  animation: turn-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+

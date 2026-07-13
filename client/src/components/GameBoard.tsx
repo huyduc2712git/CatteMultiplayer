@@ -3,7 +3,7 @@ import { useGame } from '../context/GameContext';
 import { useSocket } from '../context/SocketContext';
 import { Chat } from './Chat';
 import { MessageSquare, LogOut, Shield, Clock, Eye, AlertCircle, RefreshCw, Copy, Check } from 'lucide-react';
-import type { Suit, CardData, PlayerData } from '../types';
+import type { Suit, CardData, PlayerData, PlayedCardData } from '../types';
 
 export const GameBoard: React.FC = () => {
   const { room, leaveRoom, playCard, setReady, setUnready, startGame } = useGame();
@@ -148,6 +148,28 @@ export const GameBoard: React.FC = () => {
     5: 'top-1/2 right-2 -translate-y-1/2', // Middle right
   };
 
+  // Fetch all plays for a player to display their stack in front of their seat
+  const getPlayerPlays = (playerId: string) => {
+    const plays: { play: PlayedCardData; roundIndex: number }[] = [];
+    for (let r = 1; r <= 6; r++) {
+      const play = getPlayerPlayForRound(playerId, r);
+      if (play) {
+        plays.push({ play, roundIndex: r });
+      }
+    }
+    return plays;
+  };
+
+  // Map seatIndex to absolute positions for the played card stacks (relative to Felt Table Oval container)
+  const playedCardsPositions: Record<number, string> = {
+    0: 'bottom-[28%] left-1/2 -translate-x-1/2',
+    1: 'top-[48%] left-[20%] -translate-y-1/2',
+    2: 'top-[25%] left-[24%]',
+    3: 'top-[24%] left-1/2 -translate-x-1/2',
+    4: 'top-[25%] right-[24%]',
+    5: 'top-[48%] right-[20%] -translate-y-1/2',
+  };
+
   // Format rank abbreviation
   const getRankShort = (rank: string) => {
     if (rank === 'Jack') return 'J';
@@ -162,6 +184,15 @@ export const GameBoard: React.FC = () => {
     playCard(selectedCardId, isFaceUp);
     setSelectedCardId(null);
   };
+
+  // Trigger physical vibration on mobile when it's the user's turn
+  React.useEffect(() => {
+    if (game && game.turnPlayerId === myId && game.status !== 'RESULT' && game.status !== 'WAITING') {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([300, 100, 300]);
+      }
+    }
+  }, [game?.turnPlayerId, myId, game?.status]);
 
   return (
     <div className="min-h-screen bg-gaming-green-deep flex flex-col justify-between items-center relative overflow-hidden select-none">
@@ -219,10 +250,10 @@ export const GameBoard: React.FC = () => {
       </div>
 
       {/* Poker Table Area */}
-      <div className="flex-1 w-full max-w-4xl relative flex items-center justify-center py-6 px-4">
+      <div className="flex-1 w-full relative flex items-center justify-center p-2 sm:p-4">
         
         {/* The Felt Table Oval */}
-        <div className="felt-table-oval absolute w-[95%] h-[80%] bg-gradient-to-b from-gaming-green-felt to-gaming-green-deep border-[16px] border-slate-900/90 rounded-[100px] shadow-board flex flex-col justify-center items-center">
+        <div className="felt-table-oval absolute w-[98%] h-[94%] bg-gradient-to-b from-gaming-green-felt to-gaming-green-deep border-[12px] sm:border-[16px] border-slate-900/90 rounded-[40px] sm:rounded-[100px] shadow-board flex flex-col justify-center items-center">
           
           {/* Decorative Table Felt Logo */}
           <div className="absolute opacity-5 pointer-events-none select-none text-center">
@@ -252,41 +283,11 @@ export const GameBoard: React.FC = () => {
               </div>
             )}
 
-            {/* Display Played Cards in the Center */}
-            <div className="flex flex-wrap justify-center items-center gap-4 max-w-full">
-              {currentRound?.plays.map((play, index) => {
-                return (
-                  <div key={index} className="flex flex-col items-center relative animate-fade-in">
-                    {/* Played card */}
-                    <div className="played-card w-12 h-18 bg-transparent relative transition-all hover:scale-105 shadow-md rounded-lg">
-                      {play.isFaceUp && play.card ? (
-                        <img 
-                          src={getCardSvgPath(play.card)} 
-                          className="w-full h-full object-contain pointer-events-none select-none rounded-lg" 
-                          alt={`${play.card.rank} of ${play.card.suit}`} 
-                        />
-                      ) : (
-                        // Card back for face-down card (thiệp)
-                        <img 
-                          src="/cards/back.svg" 
-                          className="w-full h-full object-contain pointer-events-none select-none rounded-lg" 
-                          alt="Face down card" 
-                        />
-                      )}
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-bold mt-1 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-900/60 max-w-[80px] truncate">
-                      {play.playerName}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {currentRound?.plays.length === 0 && (
-                <div className="text-slate-500 text-xs text-center p-4">
-                  Đang chờ người đi đầu ra quân...
-                </div>
-              )}
-            </div>
+            {(!currentRound || currentRound.plays.length === 0) && (
+              <div className="text-slate-500/80 text-xs font-bold uppercase tracking-wider text-center p-4">
+                Đang chờ ra quân...
+              </div>
+            )}
 
           </div>
 
@@ -297,6 +298,8 @@ export const GameBoard: React.FC = () => {
             const isPlayerMe = player.id === myId;
             const isEliminated = player.status === 'ELIMINATED';
 
+            if (seatIndex === 0) return null; // Render bottom player info floating above hand cards instead
+
             return (
               <div
                 key={player.id}
@@ -304,9 +307,10 @@ export const GameBoard: React.FC = () => {
               >
                 {/* Player Avatar card */}
                 <div
+                  key={player.id + (isTurn ? '-turn' : '')}
                   className={`game-avatar-card relative flex items-center gap-2.5 p-2 rounded-2xl border bg-slate-950/90 shadow-lg ${
                     isTurn
-                      ? 'border-gaming-gold animate-gold-pulse scale-105'
+                      ? 'border-gaming-gold animate-gold-pulse scale-105 animate-turn-shake'
                       : isPlayerMe
                       ? 'border-gaming-green-light bg-gaming-green-deep/90'
                       : 'border-slate-800'
@@ -331,7 +335,7 @@ export const GameBoard: React.FC = () => {
                     </span>
                     {player.roundsWon.length > 0 ? (
                       <span className="text-[9px] text-gaming-gold font-bold flex items-center gap-0.5">
-                        ★ {player.roundsWon.length} Tồn
+                        ★ {player.roundsWon.length} Tùng
                       </span>
                     ) : (
                       <span className="text-[8px] text-slate-500 font-semibold block">
@@ -354,67 +358,54 @@ export const GameBoard: React.FC = () => {
                     </span>
                   )}
                 </div>
+              </div>
+            );
+          })}
 
-                {/* Round History Tray (Responsive Grid: 3 columns on mobile, 6 columns on tablet/desktop) */}
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mt-2 bg-slate-950/80 border border-slate-900/80 p-1.5 rounded-xl shadow-md">
-                  {[1, 2, 3, 4, 5, 6].map((roundNum) => {
-                    const play = getPlayerPlayForRound(player.id, roundNum);
-                    const isCurrentRound = game.currentRoundIndex === roundNum;
-                    const isWinner = game.rounds[roundNum - 1]?.winnerId === player.id;
-                    
-                    if (play) {
-                      return (
-                        <div
-                          key={roundNum}
-                          className={`game-history-slot w-7 h-10 rounded-md flex flex-col justify-between items-center p-0.5 relative text-[9px] font-bold ${
-                            play.isFaceUp
-                              ? `bg-white text-slate-950 border ${isWinner ? 'border-gaming-gold ring-1 ring-gaming-gold shadow-gold-glow' : 'border-slate-350'}`
-                              : 'bg-red-800 border border-red-750 text-white'
-                          }`}
-                        >
-                          {play.isFaceUp && play.card ? (
-                            <>
-                              <span className={getSuitColor(play.card.suit)}>
-                                {getRankShort(play.card.rank)}
-                              </span>
-                              <span className={`text-[10px] leading-none ${getSuitColor(play.card.suit)}`}>
-                                {getSuitSymbol(play.card.suit)}
-                              </span>
-                            </>
-                          ) : (
-                            // Mini card back for thiệp
-                            <div className="w-full h-full bg-red-800 rounded flex items-center justify-center text-[7px] text-white/70">
-                              Úp
-                            </div>
-                          )}
-                          {/* Winner/Tồn Crown Indicator */}
-                          {isWinner && (
-                            <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-gaming-gold rounded-full border border-slate-950 flex items-center justify-center text-[7px] text-slate-950 font-black">
-                              ★
-                            </div>
-                          )}
+          {/* Played Cards Stacks near each seat */}
+          {posPlayers.map(({ player, seatIndex }) => {
+            const playerPlays = getPlayerPlays(player.id);
+            const posClass = playedCardsPositions[seatIndex];
+            if (playerPlays.length === 0) return null;
+
+            return (
+              <div
+                key={`plays-${player.id}`}
+                className={`absolute ${posClass} z-10 flex -space-x-4.5 sm:-space-x-6.5 justify-center items-center`}
+              >
+                {playerPlays.map(({ play, roundIndex }) => {
+                  const isWinner = game.rounds[roundIndex - 1]?.winnerId === player.id;
+                  
+                  return (
+                    <div
+                      key={roundIndex}
+                      className={`played-stack-card rounded-md relative shadow-md select-none border border-slate-950/20 hover:scale-110 active:scale-95 ${
+                        isWinner ? 'ring-2 ring-gaming-gold shadow-gold-glow' : ''
+                      }`}
+                    >
+                      {play.isFaceUp && play.card ? (
+                        <img
+                          src={getCardSvgPath(play.card)}
+                          className="w-full h-full object-contain pointer-events-none select-none rounded-md"
+                          alt={`${play.card.rank} of ${play.card.suit}`}
+                        />
+                      ) : (
+                        <img
+                          src="/cards/back.svg"
+                          className="w-full h-full object-contain pointer-events-none select-none rounded-md"
+                          alt="Face down card"
+                        />
+                      )}
+                      
+                      {/* Winner Star Badge */}
+                      {isWinner && (
+                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gaming-gold rounded-full border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-black shadow-md z-30">
+                          ★
                         </div>
-                      );
-                    } else {
-                      // No play yet
-                      const isPast = roundNum < game.currentRoundIndex;
-                      return (
-                        <div
-                          key={roundNum}
-                          className={`game-history-slot w-7 h-10 rounded-md border flex items-center justify-center text-[8px] font-bold ${
-                            isCurrentRound
-                              ? 'border-gaming-gold/60 border-dashed animate-pulse text-gaming-gold'
-                              : isPast
-                              ? 'border-slate-800 bg-slate-900/30 text-slate-600'
-                              : 'border-slate-850 bg-slate-900/10 text-slate-700'
-                          }`}
-                        >
-                          {isPast ? 'X' : roundNum}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -573,91 +564,111 @@ export const GameBoard: React.FC = () => {
           </div>
         )}
 
-      </div>
-
-      {/* User Hand and Controls Area */}
-      <div className="w-full bg-slate-950/95 border-t border-slate-900/60 p-4 flex flex-col items-center relative z-20 backdrop-blur-md">
-        
-        {/* Selected Card Action Controls */}
-        {selectedCardId && isMyTurn && game.status !== 'RESULT' && (
-          <div className="flex gap-4 mb-4 animate-slide-up">
-            {/* Check if is leading */}
-            {suitLed ? (
-              <>
-                <button
-                  disabled={!canPlayFaceUp(me.cards!.find(c => c.id === selectedCardId)!)}
-                  onClick={() => handlePlaySelected(true)}
-                  className={`px-6 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-all ${
-                    canPlayFaceUp(me.cards!.find(c => c.id === selectedCardId)!)
-                      ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-active-glow hover:brightness-110 active:scale-95'
-                      : 'bg-slate-900 text-slate-500 border border-slate-850 cursor-not-allowed'
-                  }`}
-                >
-                  {game.currentRoundIndex === 5 ? 'BẮT ĐÈ' : 'ĐÁNH BÀI (CHẶN)'}
-                </button>
-                <button
-                  onClick={() => handlePlaySelected(false)}
-                  className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white px-6 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-all active:scale-95"
-                >
-                  ÚP BÀI (THIỆP)
-                </button>
-              </>
+        {/* User Hand and Controls Area (Floating transparently at the bottom) */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-25 flex flex-col items-center pointer-events-none w-full max-w-xl px-4">
+          
+          {/* Bottom Player Status Badge */}
+          <div className="bg-slate-950/90 border border-gaming-gold/60 px-3.5 py-1 rounded-full text-center shadow-lg mb-2 pointer-events-auto flex items-center gap-2">
+            <span className="font-extrabold text-[10px] text-white tracking-wide">{me.name} (Bạn)</span>
+            <span className="w-px h-2.5 bg-slate-800" />
+            {me.roundsWon.length > 0 ? (
+              <span className="text-[10px] text-gaming-gold font-black flex items-center gap-0.5">
+                ★ {me.roundsWon.length} Tùng
+              </span>
             ) : (
-              // Leading the round: must play face up
-              <button
-                onClick={() => handlePlaySelected(true)}
-                className="bg-gradient-to-r from-gaming-gold-dark via-gaming-gold to-gaming-gold-light text-slate-950 px-8 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-gold-glow hover:brightness-110 active:scale-95 transition-all"
-              >
-                {game.currentRoundIndex === 5 ? 'CHƯNG BÀI' : 'ĐÁNH BÀI (DẪN ĐẦU)'}
-              </button>
+              <span className="text-[9px] text-slate-500 font-semibold block">
+                KHÔNG CÓ TÙNG
+              </span>
+            )}
+            {me.status === 'ELIMINATED' && (
+              <span className="text-[9px] font-extrabold text-red-400 bg-red-950/30 border border-red-500/20 px-2 py-0.5 rounded-lg ml-1 uppercase">
+                CHẾT TÙNG
+              </span>
             )}
           </div>
-        )}
-
-        {/* Selected card alert/helper message */}
-        {selectedCardId && isMyTurn && game.status !== 'RESULT' && !suitLed && (
-          <p className="text-[10px] text-gaming-gold/80 mb-3 font-semibold uppercase tracking-wider flex items-center gap-1">
-            <AlertCircle size={12} /> {game.currentRoundIndex === 5 ? 'Bạn là người chưng bài ở vòng này. Phải đi bài ngửa!' : 'Bạn đang dẫn đầu vòng chơi này. Phải đi bài ngửa!'}
-          </p>
-        )}
-
-        {/* Selected card help in defense */}
-        {selectedCardId && isMyTurn && game.status !== 'RESULT' && suitLed && (
-          <p className="text-[10px] text-slate-400 mb-3 font-semibold uppercase tracking-wider flex items-center gap-1">
-            <Eye size={12} /> {game.currentRoundIndex === 5 ? 'Chọn Bắt đè (nếu muốn chặn bài Chưng) hoặc Úp bài (nhường lượt).' : 'Chọn Đánh bài (nếu muốn chặn) hoặc Úp bài (nhường lượt).'}
-          </p>
-        )}
-
-        {/* Player card list */}
-        <div className="flex justify-center items-center gap-2 max-w-full py-1">
-          {me.cards && me.cards.length > 0 ? (
-            me.cards.map((card, index) => {
-              const isSelected = selectedCardId === card.id;
-              const isTurnPlayable = isMyTurn && game.status !== 'RESULT';
-              
-              return (
+          
+          {/* Selected Card Action Controls */}
+          {selectedCardId && isMyTurn && game.status !== 'RESULT' && (
+            <div className="flex gap-4 mb-3 animate-slide-up pointer-events-auto">
+              {/* Check if is leading */}
+              {suitLed ? (
+                <>
+                  <button
+                    disabled={!canPlayFaceUp(me.cards!.find(c => c.id === selectedCardId)!)}
+                    onClick={() => handlePlaySelected(true)}
+                    className={`px-6 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-all cursor-pointer ${
+                      canPlayFaceUp(me.cards!.find(c => c.id === selectedCardId)!)
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-active-glow hover:brightness-110 active:scale-95'
+                        : 'bg-slate-900 text-slate-500 border border-slate-850 cursor-not-allowed'
+                    }`}
+                  >
+                    {game.currentRoundIndex === 5 ? 'BẮT ĐÈ' : 'ĐÁNH BÀI (CHẶN)'}
+                  </button>
+                  <button
+                    onClick={() => handlePlaySelected(false)}
+                    className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white px-6 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    ÚP BÀI (THIỆP)
+                  </button>
+                </>
+              ) : (
+                // Leading the round: must play face up
                 <button
-                  key={card.id}
-                  disabled={!isTurnPlayable}
-                  onClick={() => setSelectedCardId(isSelected ? null : card.id)}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  className={`hand-card w-16 h-24 bg-transparent border-0 relative transition-all duration-200 transform animate-deal ${
-                    isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow rounded-xl' : ''
-                  } ${isTurnPlayable ? 'hover:-translate-y-2 cursor-pointer' : 'opacity-85'}`}
+                  onClick={() => handlePlaySelected(true)}
+                  className="bg-gradient-to-r from-gaming-gold-dark via-gaming-gold to-gaming-gold-light text-slate-950 px-8 py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-gold-glow hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                 >
-                  <img 
-                    src={getCardSvgPath(card)} 
-                    className="w-full h-full object-contain pointer-events-none select-none rounded-xl" 
-                    alt={`${card.rank} of ${card.suit}`} 
-                  />
+                  {game.currentRoundIndex === 5 ? 'CHƯNG BÀI' : 'ĐÁNH BÀI (DẪN ĐẦU)'}
                 </button>
-              );
-            })
-          ) : (
-            <div className="text-slate-500 text-xs py-4 uppercase font-bold tracking-wider">
-              {me.status === 'ELIMINATED' ? 'BẠN ĐÃ BỊ LOẠI' : 'Không có bài trên tay'}
+              )}
             </div>
           )}
+
+          {/* Selected card alert/helper message */}
+          {selectedCardId && isMyTurn && game.status !== 'RESULT' && !suitLed && (
+            <p className="text-[10px] text-gaming-gold/90 mb-2.5 font-bold uppercase tracking-wider flex items-center gap-1 bg-slate-950/85 px-3 py-1 rounded-full border border-slate-900/60 pointer-events-auto">
+              <AlertCircle size={12} /> {game.currentRoundIndex === 5 ? 'Bạn là người chưng bài ở vòng này. Phải đi bài ngửa!' : 'Bạn đang dẫn đầu vòng chơi này. Phải đi bài ngửa!'}
+            </p>
+          )}
+
+          {/* Selected card help in defense */}
+          {selectedCardId && isMyTurn && game.status !== 'RESULT' && suitLed && (
+            <p className="text-[10px] text-slate-300 mb-2.5 font-bold uppercase tracking-wider flex items-center gap-1 bg-slate-950/85 px-3 py-1 rounded-full border border-slate-900/60 pointer-events-auto">
+              <Eye size={12} /> {game.currentRoundIndex === 5 ? 'Chọn Bắt đè (nếu muốn chặn bài Chưng) hoặc Úp bài (nhường lượt).' : 'Chọn Đánh bài (nếu muốn chặn) hoặc Úp bài (nhường lượt).'}
+            </p>
+          )}
+
+          {/* Player card list */}
+          <div className="flex justify-center items-center gap-2 max-w-full py-1 pointer-events-auto">
+            {me.cards && me.cards.length > 0 ? (
+              me.cards.map((card, index) => {
+                const isSelected = selectedCardId === card.id;
+                const isTurnPlayable = isMyTurn && game.status !== 'RESULT';
+                
+                return (
+                  <button
+                    key={card.id}
+                    disabled={!isTurnPlayable}
+                    onClick={() => setSelectedCardId(isSelected ? null : card.id)}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    className={`hand-card w-16 h-24 bg-transparent border-0 relative transition-all duration-200 transform animate-deal ${
+                      isSelected ? 'isSelected -translate-y-6 ring-2 ring-gaming-gold shadow-gold-glow rounded-xl' : ''
+                    } ${isTurnPlayable ? 'hover:-translate-y-2 cursor-pointer' : 'opacity-85'}`}
+                  >
+                    <img 
+                      src={getCardSvgPath(card)} 
+                      className="w-full h-full object-contain pointer-events-none select-none rounded-xl" 
+                      alt={`${card.rank} of ${card.suit}`} 
+                    />
+                  </button>
+                );
+              })
+            ) : (
+              <div className="text-slate-400 text-xs py-3.5 uppercase font-bold tracking-wider bg-slate-950/85 px-4 py-2 rounded-full border border-slate-900/60 pointer-events-auto">
+                {me.status === 'ELIMINATED' ? 'BẠN ĐÃ BỊ LOẠI' : 'Không có bài trên tay'}
+              </div>
+            )}
+          </div>
+
         </div>
 
       </div>
