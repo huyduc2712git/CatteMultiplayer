@@ -9,6 +9,23 @@ export const Lobby: React.FC = () => {
   const [roomIdInput, setRoomIdInput] = useState('');
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
 
+  const enterFullscreen = () => {
+    try {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if ((docEl as any).webkitRequestFullscreen) {
+        (docEl as any).webkitRequestFullscreen();
+      } else if ((docEl as any).mozRequestFullScreen) {
+        (docEl as any).mozRequestFullScreen();
+      } else if ((docEl as any).msRequestFullscreen) {
+        (docEl as any).msRequestFullscreen();
+      }
+    } catch (e) {
+      console.warn("Fullscreen request failed", e);
+    }
+  };
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim() || !roomName.trim()) return;
@@ -73,6 +90,7 @@ export const Lobby: React.FC = () => {
                   alert('Vui lòng nhập tên người chơi!');
                   return;
                 }
+                enterFullscreen();
                 setMode('create');
                 clearError();
               }}
@@ -87,6 +105,7 @@ export const Lobby: React.FC = () => {
                   alert('Vui lòng nhập tên người chơi!');
                   return;
                 }
+                enterFullscreen();
                 setMode('join');
                 clearError();
               }}
@@ -105,6 +124,7 @@ export const Lobby: React.FC = () => {
                   <button
                     key={count}
                     onClick={() => {
+                      enterFullscreen();
                       setupMockRoom(count);
                     }}
                     className="bg-slate-900 hover:bg-gaming-green-felt/35 border border-slate-800 text-slate-300 hover:text-gaming-gold py-2.5 rounded-xl font-black text-xs transition-all active:scale-90 flex flex-col items-center justify-center cursor-pointer"
