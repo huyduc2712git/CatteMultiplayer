@@ -19,12 +19,14 @@ export class GameEngine {
   public winnerId: string | null = null;
   public winType: 'INSTANT_TU_QUY' | 'INSTANT_DONG_CHAT' | 'INSTANT_SAU_NHO_6' | 'WIN_TUNG' | 'WIN_ROUND_6' | null = null;
 
-  constructor(roomId: string, players: Player[]) {
+  constructor(roomId: string, players: Player[], initialDealerId?: string) {
     this.roomId = roomId;
     this.players = players;
     this.deck = new Deck();
-    // Default dealer is the first player
-    if (players.length > 0) {
+    // Default dealer is the previous winner, or the first player in room
+    if (initialDealerId && players.some(p => p.id === initialDealerId)) {
+      this.dealerId = initialDealerId;
+    } else if (players.length > 0) {
       this.dealerId = players[0].id;
     }
   }
@@ -157,28 +159,52 @@ export class GameEngine {
     const currentRound = this.rounds[this.currentRoundIndex - 1];
     const survivors = this.getSurvivingPlayers();
 
-    // Check if the round is complete
-    // In rounds 1-4, everyone plays 1 card.
-    // In round 5 (CHUNG), only survivors play 1 card.
-    const expectedPlaysCount = this.currentRoundIndex <= 4 ? this.players.length : survivors.length;
+    // The round is complete when all surviving players have made a play
+    const roundComplete = survivors.every(p => currentRound.plays.some(play => play.playerId === p.id));
 
-    if (currentRound.plays.length === expectedPlaysCount) {
+    if (roundComplete) {
       // Round complete, resolve it
       this.endRound();
     } else {
-      // Find the next player in clockwise order who is active
+      // Find the next player in clockwise order who is active (status === 'PLAYING')
+      // and has NOT played yet in this round
       const currentIdx = this.getPlayerIndex(this.turnPlayerId!);
       let nextIdx = (currentIdx + 1) % this.players.length;
-
-      // In Round 5, skip players who are eliminated
-      if (this.currentRoundIndex === 5) {
-        while (this.players[nextIdx].status !== 'PLAYING') {
-          nextIdx = (nextIdx + 1) % this.players.length;
-        }
+      
+      let safetyCounter = 0;
+      while (
+        (this.players[nextIdx].status !== 'PLAYING' || 
+         currentRound.plays.some(play => play.playerId === this.players[nextIdx].id)) &&
+        safetyCounter < this.players.length
+      ) {
+        nextIdx = (nextIdx + 1) % this.players.length;
+        safetyCounter++;
       }
 
       this.turnPlayerId = this.players[nextIdx].id;
       this.turnTimeLeft = 30;
+    }
+  }
+
+  public handlePlayerLeft(playerId: string): void {
+    const player = this.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    player.status = 'ELIMINATED';
+    console.log(`Player ${player.name} left the game and was ELIMINATED.`);
+
+    // If only one survivor remains, they win the game immediately
+    const survivors = this.getSurvivingPlayers();
+    if (survivors.length === 1 && this.status !== 'RESULT' && this.status !== 'WAITING') {
+      console.log(`Only one survivor left: ${survivors[0].name}. Ending game.`);
+      this.endGame(survivors[0].id, 'WIN_TUNG');
+      return;
+    }
+
+    // If it was their turn, advance the turn to the next player
+    if (this.status !== 'WAITING' && this.status !== 'RESULT' && this.turnPlayerId === playerId) {
+      console.log(`Advancing turn because active player ${player.name} left.`);
+      this.advanceTurn();
     }
   }
 

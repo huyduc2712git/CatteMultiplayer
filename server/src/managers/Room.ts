@@ -46,11 +46,7 @@ export class Room {
 
     // If game is active, handle player leaving (disconnect/forfeit)
     if (this.gameEngine) {
-      // Eliminate player or handle forfeit
-      const gamePlayer = this.gameEngine.players.find(p => p.id === playerId);
-      if (gamePlayer) {
-        gamePlayer.status = 'ELIMINATED';
-      }
+      this.gameEngine.handlePlayerLeft(playerId);
     }
 
     // If the room master left, assign a new room master
@@ -71,7 +67,10 @@ export class Room {
       throw new Error('All players must be ready to start');
     }
 
-    this.gameEngine = new GameEngine(this.id, this.players);
+    // Retrieve the winner of the previous game to be the new dealer
+    const prevWinnerId = this.gameEngine?.winnerId || undefined;
+
+    this.gameEngine = new GameEngine(this.id, this.players, prevWinnerId);
     this.gameEngine.start();
   }
 

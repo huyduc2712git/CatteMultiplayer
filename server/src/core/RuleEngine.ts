@@ -106,16 +106,15 @@ export class RuleEngine {
   ): string {
     const chưngSuit = chưngCard.suit;
     let winningPlayerId = chưngPlayerId;
-    let winningCard = chưngCard;
+    let winningCard: Card | null = null;
 
-    // Check if any other player beats the chưng card
+    // Find the player with the highest 6th card of the chưng suit
     for (const [playerId, card6] of round6Cards.entries()) {
-      if (playerId === chưngPlayerId) continue;
-
-      // Card must be same suit and higher rank than the current winning card
-      if (card6.suit === chưngSuit && card6.getNumericValue() > winningCard.getNumericValue()) {
-        winningPlayerId = playerId;
-        winningCard = card6;
+      if (card6.suit === chưngSuit) {
+        if (!winningCard || card6.getNumericValue() > winningCard.getNumericValue()) {
+          winningPlayerId = playerId;
+          winningCard = card6;
+        }
       }
     }
 
